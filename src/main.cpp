@@ -1,8 +1,5 @@
 
 #include <Arduino.h>
-#include <SPI.h>
-#include "RTClib.h"
-
 
 //On définit les branchements
 #define Aff1 2
@@ -21,8 +18,6 @@
 
 #define speaker 8
 
-RTC_PCF8563 rtc;
-
 const byte dig0 = 0b0000001;
 const byte dig1 = 0b1001111;
 const byte dig2 = 0b0010010;
@@ -38,9 +33,15 @@ const byte dig9 = 0b0000100;
 const byte digits[10] = {dig0,dig1,dig2,dig3,dig4,dig5,dig6,dig7,dig8,dig9};
 
 const String time_at_compilation = __TIME__;
-String hours;
-String minutes;
-String fullTime;
+int hours;
+int minutes;
+int fullTime;
+int secondsInAMinute = 60;
+int blinkCountdown = 800;
+unsigned long time_now_1 = 0;
+unsigned long time_now_2;
+
+bool dpState = false;
 
 void displayDigit(int display, int digit, bool dp){
   switch(display){
@@ -118,12 +119,25 @@ void setup() {
   pinMode(speaker, OUTPUT);
   digitalWrite(speaker, HIGH);
 
-  hours = time_at_compilation.substring(0,2);
-  minutes = time_at_compilation.substring(3,5);
-  fullTime = hours+minutes;
+  hours = time_at_compilation.substring(0,2).toInt();
+  minutes = time_at_compilation.substring(3,5).toInt();
+  fullTime = (hours*100)+minutes;
 }
 
 void loop() {
-  int timeElapsed = millis()/1000;
-  displayNumber(fullTime.toInt(), 2000, 1);
+  if(millis()/1000 >= time_now_1 + secondsInAMinute){
+        time_now_1 += secondsInAMinute;
+        minutes++;
+        if(minutes >= 60){
+          minutes = 0;
+          hours++;
+        }
+        if(hours > 24){
+          hours=0;
+        }
+  }
+  if(millis() >= time_now_2 + blinkCountdown){ time_now_2 += blinkCountdown; dpState=!dpState; }
+  fullTime = (hours*100)+minutes;
+  Serial.println(dpState);
+  displayNumber(fullTime, 3500, dpState);
 }
